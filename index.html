@@ -472,12 +472,22 @@
             return getMonthKey(currentCalendarYear, currentCalendarMonth);
         }
 
-        // Data persistence
+        // Data persistence with better error handling
         function loadData() {
             try {
+                // Check if localStorage is available
+                if (typeof(Storage) === "undefined") {
+                    console.log('localStorage not supported');
+                    return;
+                }
+                
                 const saved = localStorage.getItem('periodTrackerData');
-                if (saved) {
-                    markedDays = JSON.parse(saved);
+                if (saved && saved !== 'null' && saved !== 'undefined') {
+                    const parsedData = JSON.parse(saved);
+                    if (parsedData && typeof parsedData === 'object') {
+                        markedDays = parsedData;
+                        console.log('Data loaded successfully:', Object.keys(markedDays).length, 'months');
+                    }
                 }
             } catch (error) {
                 console.log('Error loading data:', error);
@@ -487,13 +497,41 @@
 
         function saveData() {
             try {
-                localStorage.setItem('periodTrackerData', JSON.stringify(markedDays));
+                // Check if localStorage is available
+                if (typeof(Storage) === "undefined") {
+                    console.log('localStorage not supported - data will not persist');
+                    return false;
+                }
+                
+                const dataString = JSON.stringify(markedDays);
+                localStorage.setItem('periodTrackerData', dataString);
+                
+                // Verify the data was saved
+                const verification = localStorage.getItem('periodTrackerData');
+                if (verification === dataString) {
+                    console.log('Data saved successfully');
+                    return true;
+                } else {
+                    console.log('Data save verification failed');
+                    return false;
+                }
             } catch (error) {
                 console.log('Error saving data:', error);
+                
+                // Try to clear some space and retry
+                try {
+                    localStorage.clear();
+                    localStorage.setItem('periodTrackerData', JSON.stringify(markedDays));
+                    console.log('Data saved after clearing localStorage');
+                    return true;
+                } catch (retryError) {
+                    console.log('Retry save also failed:', retryError);
+                    return false;
+                }
             }
         }
 
-        // Period management
+        // Period management with forced saving
         function togglePeriodDay(dayNumber) {
             const monthKey = getCurrentMonthKey();
             
@@ -512,7 +550,12 @@
                 markedDays[monthKey].sort((a, b) => a - b);
             }
             
-            saveData();
+            // Force save and verify
+            const saved = saveData();
+            if (!saved) {
+                alert('⚠️ Warning: Data may not be saving properly. Try refreshing the page.');
+            }
+            
             updateDisplay();
         }
 
@@ -555,7 +598,14 @@
             document.getElementById('startDate').value = '';
             document.getElementById('endDate').value = '';
 
-            saveData();
+            // Force save and verify
+            const saved = saveData();
+            if (saved) {
+                alert('✅ Period added and saved!');
+            } else {
+                alert('⚠️ Period added but may not be saved. Try refreshing the page.');
+            }
+            
             updateDisplay();
         }
 
@@ -674,7 +724,13 @@
                 }
             });
             
-            saveData();
+            const saved = saveData();
+            if (saved) {
+                alert('✅ Period deleted and saved!');
+            } else {
+                alert('⚠️ Period deleted but may not be saved.');
+            }
+            
             updateDisplay();
         }
 
@@ -897,15 +953,35 @@
         function clearAllData() {
             if (confirm('⚠️ Are you sure you want to delete all period data? This cannot be undone.')) {
                 markedDays = {};
-                saveData();
+                const saved = saveData();
                 updateDisplay();
-                alert('✅ All data cleared');
+                
+                if (saved) {
+                    alert('✅ All data cleared and saved!');
+                } else {
+                    alert('⚠️ Data cleared but save status unclear.');
+                }
             }
         }
 
+        // Auto-save on page unload (before closing/refreshing)
+        window.addEventListener('beforeunload', function() {
+            saveData();
+        });
+
+        // Auto-save every 30 seconds as backup
+        setInterval(function() {
+            if (Object.keys(markedDays).length > 0) {
+                saveData();
+                console.log('Auto-save completed');
+            }
+        }, 30000);
+
         // Initialize the app
+        console.log('Initializing Period Tracker...');
         loadData();
         updateDisplay();
+        console.log('Period Tracker loaded with data for', Object.keys(markedDays).length, 'months');
     </script>
 </body>
 </html>
