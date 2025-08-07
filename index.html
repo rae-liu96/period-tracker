@@ -1,4 +1,23 @@
-<!DOCTYPE html>
+.month-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .month-title {
+            flex: 1;
+            text-align: center;
+            margin: 0;
+            color: #4c51bf;
+            font-size: 1.3em;
+        }
+
+        .nav-btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            flex-shrink: 0;
+        }<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -278,12 +297,12 @@
     <div class="container">
         <h1>🌸 Period Tracker</h1>
         
-        <div class="card">
+                    <div class="card">
             <h2>Calendar View - Click to Log Period Days</h2>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <button onclick="previousMonth()" style="padding: 8px 16px; font-size: 14px;">← Previous</button>
-                <h3 id="currentMonthYear" style="margin: 0; color: #4c51bf;"></h3>
-                <button onclick="nextMonth()" style="padding: 8px 16px; font-size: 14px;">Next →</button>
+            <div class="month-nav">
+                <button onclick="previousMonth()" class="nav-btn">← PREVIOUS</button>
+                <h3 id="currentMonthYear" class="month-title">August 2025</h3>
+                <button onclick="nextMonth()" class="nav-btn">NEXT →</button>
             </div>
             <div class="calendar" id="calendar"></div>
             <div style="margin-top: 15px; display: flex; gap: 20px; justify-content: center; font-size: 14px;">
@@ -346,9 +365,31 @@
 
     <script>
         // Simple storage: store day numbers with month/year info
-        let markedDays = {}; // Format: "2025-08": [4, 6, 8]
+        let markedDays = {};
         let currentCalendarMonth = new Date().getMonth();
         let currentCalendarYear = new Date().getFullYear();
+
+        // Load data from localStorage on app start
+        function loadData() {
+            try {
+                const saved = localStorage.getItem('periodTrackerData');
+                if (saved) {
+                    markedDays = JSON.parse(saved);
+                }
+            } catch (error) {
+                console.log('Error loading data:', error);
+                markedDays = {};
+            }
+        }
+
+        // Save data to localStorage whenever data changes
+        function saveData() {
+            try {
+                localStorage.setItem('periodTrackerData', JSON.stringify(markedDays));
+            } catch (error) {
+                console.log('Error saving data:', error);
+            }
+        }
 
         function getMonthKey(year, month) {
             return `${year}-${String(month + 1).padStart(2, '0')}`;
@@ -376,6 +417,7 @@
                 markedDays[monthKey].sort((a, b) => a - b);
             }
             
+            saveData(); // Save after every change
             updateDisplay();
         }
 
@@ -420,6 +462,7 @@
             document.getElementById('startDate').value = '';
             document.getElementById('endDate').value = '';
 
+            saveData(); // Save after manual entry
             updateDisplay();
         }
 
@@ -540,6 +583,7 @@
                 }
             });
             
+            saveData(); // Save after deletion
             updateDisplay();
         }
 
@@ -763,6 +807,7 @@
                             markedDays[monthKey].sort((a, b) => a - b);
                         });
                         
+                        saveData(); // Save after import
                         updateDisplay();
                         alert('✅ Data imported successfully!');
                     } else {
@@ -783,12 +828,14 @@
         function clearAllData() {
             if (confirm('⚠️ Are you sure you want to delete all period data? This cannot be undone.')) {
                 markedDays = {};
+                saveData(); // Save the empty state
                 updateDisplay();
                 alert('✅ All data cleared');
             }
         }
 
         // Initialize the app
+        loadData(); // Load saved data first
         updateDisplay();
     </script>
 </body>
